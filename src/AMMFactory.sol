@@ -7,36 +7,24 @@ contract AMMFactory {
     mapping(address => mapping(address => address)) public getPair;
     address[] public allPairs;
 
-    error PairExists();
-    error ZeroAddress();
+    event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
+
+    function allPairsLength() external view returns (uint256) {
+        return allPairs.length;
+    }
 
     function createPairWithCreate(address tokenA, address tokenB) external returns (address pair) {
-        if (tokenA == address(0) || tokenB == address(0)) revert ZeroAddress();
+        require(tokenA != tokenB, "IDENTICAL_ADDRESSES");
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        if (getPair[token0][token1] != address(0)) revert PairExists();
+        require(token0 != address(0), "ZERO_ADDRESS");
+        require(getPair[token0][token1] == address(0), "PAIR_EXISTS");
 
         pair = address(new AMMPair(token0, token1));
 
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair;
         allPairs.push(pair);
-    }
 
-    function createPairWithCreate2(address tokenA, address tokenB) external returns (address pair) {
-        if (tokenA == address(0) || tokenB == address(0)) revert ZeroAddress();
-        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        if (getPair[token0][token1] != address(0)) revert PairExists();
-
-        bytes memory bytecode = type(AMMPair).creationCode;
-        bytes memory initCode = abi.encodePacked(bytecode, abi.encode(token0, token1));
-        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
-
-        assembly {
-            pair := create2(0, add(initCode, 32), mload(initCode), salt)
-        }
-
-        getPair[token0][token1] = pair;
-        getPair[token1][token0] = pair;
-        allPairs.push(pair);
+        emit PairCreated(token0, token1, pair, allPairs.length);
     }
 }

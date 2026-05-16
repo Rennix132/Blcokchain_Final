@@ -97,4 +97,15 @@ contract AMMTest is Test {
         assertGe(kAfter, kBefore);
         vm.stopPrank();
     }
+
+    function test_FactoryGettersAndReverts() public {
+        address pairAddr = factory.getPair(address(token0), address(token1));
+        assertEq(pairAddr, address(pair));
+
+        assertEq(factory.allPairsLength(), 1);
+        assertEq(factory.allPairs(0), address(pair));
+
+        vm.expectRevert();
+        factory.createPairWithCreate(address(token0), address(token1));
+    }
 }

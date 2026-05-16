@@ -20,7 +20,7 @@ contract TreasuryV1 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    function getVersion() external pure returns (uint256) {
+    function getVersion() external pure virtual returns (uint256) {
         return 1;
     }
 }

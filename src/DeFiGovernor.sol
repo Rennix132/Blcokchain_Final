@@ -11,16 +11,13 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
 contract DeFiGovernor is Governor, GovernorSettings, GovernorCountingSimple, GovernorVotes, GovernorVotesQuorumFraction, GovernorTimelockControl {
-    constructor(IVotes _token, TimelockController _timelock)
+    constructor(IVotes _token, address _timelock)
         Governor("DeFiGovernor")
- 
         GovernorSettings(7200, 50400, 0)
         GovernorVotes(_token)
-
         GovernorVotesQuorumFraction(4)
-        GovernorTimelockControl(_timelock)
+        GovernorTimelockControl(TimelockController(payable(_timelock)))
     {}
-
 
     function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.votingDelay();
