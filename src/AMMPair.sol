@@ -41,7 +41,7 @@ contract AMMPair is ERC20, ReentrancyGuard {
 
         if (totalSupply() == 0) {
             liquidity = Math.sqrt(amount0 * amount1) - 1000;
-            _mint(address(0), 1000);
+            _mint(address(0xdead), 1000);
         } else {
             liquidity = Math.min(
                 (amount0 * totalSupply()) / _reserve0,
