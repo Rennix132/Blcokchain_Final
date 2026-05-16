@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeFi Platform Vanilla</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen p-8 font-sans">
+
+    <div class="max-w-4xl mx-auto space-y-8">
+        
+        <div class="flex justify-between items-center border-b border-slate-800 pb-6">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                DeFi Platform (Vanilla JS)
+            </h1>
+            <div id="wallet-section">
+                <button id="connect-btn" onclick="connectWallet()" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 px-5 py-2 rounded-lg text-sm font-semibold shadow-lg transition cursor-pointer">
+                    Подключить кошелёк
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+            <h2 class="text-xl font-semibold text-gray-200">Создать новую торговую пару</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input id="token0" type="text" placeholder="Адрес Token 0" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm font-mono focus:outline-none focus:border-cyan-500">
+                <input id="token1" type="text" placeholder="Адрес Token 1" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm font-mono focus:outline-none focus:border-cyan-500">
+            </div>
+            <button id="create-btn" onclick="createPair()" class="w-full bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold py-3 border border-slate-700 rounded-lg text-sm transition cursor-pointer">
+                Запустить функцию createPairWithCreate
+            </button>
+            <p id="tx-status" class="text-xs text-center hidden"></p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 text-gray-300 flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-green-500 animate-ping"></span>
+                Активные торговые пары (из субграфа)
+            </h2>
+            
+            <div id="pools-container" class="space-y-4">
+                <p class="text-center py-4 text-gray-500 animate-pulse">Загрузка данных из индксера...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Константы твоего деплоя
+        const FACTORY_ADDRESS = "0xff2435374e70acfff4619ef0e6b337115095937d";
+        // Адрес исправлен: убрана лишняя единица в начале ID аккаунта (75401 вместо 175401)
+        const GRAPH_URL = "https://api.studio.thegraph.com/query/75401/defi-ecosystem/v0.0.2";
+        
+        const FACTORY_ABI = [
+            "function createPairWithCreate(address tokenA, address tokenB) external returns (address pair)"
+        ];
+
+        const GRAPHQL_QUERY = JSON.stringify({
+            query: `{
+                pairCreateds(first: 5, orderBy: blockNumber, orderDirection: desc) {
+                    id
+                    pair
+                    token0
+                    token1
+                    blockNumber
+                }
+            }`
+        });
+
+        let signer = null;
+
+        // Функция принудительного переключения кошелька на сеть Sepolia
+        async function ensureSepoliaNetwork() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0xaa36a7' }],
+                });
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: '0xaa36a7',
+                                chainName: 'Sepolia Testnet',
+                                rpcUrls: ['https://rpc.ankr.com/eth_sepolia'],
+                                nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 },
+                                blockExplorerUrls: ['https://sepolia.etherscan.io']
+                            }],
+                        });
+                    } catch (addError) {
+                        console.error("Не удалось добавить сеть Sepolia:", addError);
+                    }
+                }
+            }
+        }
+
+        // 1. ПОДКЛЮЧЕНИЕ КОШЕЛЬКА
+        async function connectWallet() {
+            if (!window.ethereum) return alert("Поставь MetaMask!");
+            
+            try {
+                await ensureSepoliaNetwork();
+
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                const userAddress = await signer.getAddress();
+                
+                document.getElementById("wallet-section").innerHTML = `
+                    <span class="text-xs font-mono bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg text-emerald-400">
+                        ${userAddress.slice(0,6)}...${userAddress.slice(-4)}
+                    </span>
+                `;
+                console.log("Кошелек подключен:", userAddress);
+            } catch (err) {
+                alert("Ошибка подключения: " + err.message);
+            }
+        }
+
+        // 2. ВЫЗОВ КОНТРАКТА (WRITE)
+        async function createPair() {
+            if (!window.ethereum) return alert("Поставь MetaMask!");
+            
+            await ensureSepoliaNetwork();
+
+            if (!signer) return alert("Сначала подключи кошелёк кнопкой сверху!");
+            
+            const token0Address = document.getElementById("token0").value.trim();
+            const token1Address = document.getElementById("token1").value.trim();
+            const statusStyle = document.getElementById("tx-status");
+
+            if (!token0Address || !token1Address) return alert("Введи оба адреса токенов!");
+
+            try {
+                statusStyle.classList.remove("hidden", "text-red-400", "text-green-400");
+                statusStyle.classList.add("text-cyan-400", "animate-pulse");
+                statusStyle.innerText = "Подтверди транзакцию в Метамаске...";
+
+                const factoryContract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+                const tx = await factoryContract.createPairWithCreate(token0Address, token1Address);
+                
+                statusStyle.innerText = "Транзакция отправлена в сеть! Ждем блок...";
+                await tx.wait();
+
+                statusStyle.classList.remove("text-cyan-400", "animate-pulse");
+                statusStyle.classList.add("text-green-400");
+                statusStyle.innerText = "Пул успешно создан! Обновляю данные...";
+                
+                setTimeout(loadSubgraphData, 5000); 
+            } catch (err) {
+                statusStyle.classList.remove("text-cyan-400", "animate-pulse");
+                statusStyle.classList.add("text-red-400");
+                statusStyle.innerText = "Ошибка: " + err.message;
+            }
+        }
+
+        // 3. ЧТЕНИЕ ИЗ СУБГРАФА (READ)
+        async function loadSubgraphData() {
+            const container = document.getElementById("pools-container");
+            try {
+                const response = await fetch(GRAPH_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: GRAPHQL_QUERY
+                });
+                
+                const result = await response.json();
+                console.log("Ответ от The Graph API:", result);
+
+                if (result.errors) {
+                    container.innerHTML = `<p class="text-red-500 text-center py-4">Ошибка субграфа: ${result.errors[0].message}</p>`;
+                    return;
+                }
+
+                const pools = result?.data?.pairCreateds || [];
+
+                if (pools.length === 0) {
+                    container.innerHTML = `<p class="text-gray-500 text-center py-4">Пулы в субграфе пока не обнаружены. Синхронизация...</p>`;
+                    return;
+                }
+
+                container.innerHTML = pools.map(pool => `
+                    <div class="p-4 bg-slate-950 border border-slate-800 rounded-lg space-y-2 font-mono text-xs md:text-sm">
+                        <div class="flex justify-between border-b border-slate-800 pb-2 text-cyan-400">
+                            <span>POOL: ${pool.pair}</span>
+                            <span class="text-gray-500">Block: ${pool.blockNumber}</span>
+                        </div>
+                        <p class="text-gray-400">Token 0: <span class="text-gray-200">${pool.token0}</span></p>
+                        <p class="text-gray-400">Token 1: <span class="text-gray-200">${pool.token1}</span></p>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-500 text-center py-4">Ошибка сети при чтении: ${err.message}</p>`;
+            }
+        }
+
+        // Автоматическая загрузка данных при открытии страницы
+        window.onload = loadSubgraphData;
+    </script>
+</body>
+</html>

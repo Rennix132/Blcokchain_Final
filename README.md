@@ -1,66 +1,18 @@
-## Foundry
+# Decentralized AMM Factory & Indexing System
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Лабораторный проект децентрализованного приложения (dApp) для развертывания смарт-контрактов торговых пар в сети Sepolia и индексации событий через Graph Protocol.
 
-Foundry consists of:
+## 🏗 Архитектура приложения
+1. **Smart Contracts (Foundry):** Смарт-контракты фабрики пулов и токенов стандарта ERC-20.
+2. **Indexing Layer (The Graph):** Субграф для отслеживания и агрегации блокчейн-событий `PairCreated`.
+3. **Frontend Layer (Vanilla JS):** Клиентский интерфейс взаимодействия через провайдер Ethers.js v6 и интеграцию с MetaMask.
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## 📍 Детали деплоя (Sepolia Testnet)
+* **AMMFactory Contract:** `0xff2435374e70acfff4619ef0e6b337115095937d`
+* **SubGraph Query URL:** `https://api.studio.thegraph.com/query/75401/defi-ecosystem/v0.0.2`
 
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+## 🚀 Инструкция по запуску локально
+1. Убедитесь, что в системе установлен Python.
+2. Откройте терминал в корневой директории проекта и запустите сервер:
+   ```bash
+   python -m http.server 3000
