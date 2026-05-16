@@ -1,0 +1,8 @@
+{
+  "sepolia": {
+    "AMMFactory": {
+      "address": "0x5298f56dc4eb16cc387770034a6415756cb72758",
+      "startBlock": 10865051
+    }
+  }
+}
